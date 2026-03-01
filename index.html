@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>热点内容生成器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 15px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        header { text-align: center; color: white; padding: 20px; }
+        header h1 { font-size: 26px; margin-bottom: 8px; }
+        .notice {
+            background: rgba(255,255,255,0.15);
+            border-radius: 12px;
+            padding: 15px;
+            margin: 15px 0;
+            color: white;
+            font-size: 14px;
+        }
+        .notice a { color: #ffd700; }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .card h2 { color: #667eea; font-size: 16px; margin-bottom: 15px; }
+        .form-group { margin-bottom: 16px; }
+        label { display: block; color: #555; font-weight: 600; margin-bottom: 8px; font-size: 14px; }
+        input, select, textarea {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+        textarea { min-height: 80px; resize: vertical; }
+        .btn {
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+        }
+        .btn:disabled { opacity: 0.5; }
+        .result-area {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+        .result-area.show { display: block; }
+        .result-content {
+            background: white;
+            border-radius: 10px;
+            padding: 18px;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            font-size: 15px;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+        }
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            display: none;
+        }
+        .toast.show { display: block; }
+        
+        /* 热点列表样式 */
+        .hot-section { margin-top: 20px; }
+        .hot-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .hot-tabs {
+            display: flex;
+            gap: 10px;
+        }
+        .hot-tab {
+            padding: 8px 16px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .hot-tab.active {
+            background: #667eea;
+            color: white;
+        }
+        .hot-list {
+            list-style: none;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .hot-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .hot-item:hover {
+            background: #f8f9fa;
+        }
+        .hot-rank {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 13px;
+            margin-right: 12px;
+        }
+        .hot-rank.top3 {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+            color: white;
+        }
+        .hot-rank.normal {
+            background: #f0f0f0;
+            color: #666;
+        }
+        .hot-text {
+            flex: 1;
+            font-size: 14px;
+            color: #333;
+        }
+        .hot-heat {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .heat-bao { background: #ff4757; color: white; }
+        .heat-re { background: #ff6348; color: white; }
+        .heat-xin { background: #74b9ff; color: white; }
+        .hot-source {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #667eea;
+            color: white;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        .update-info {
+            font-size: 12px;
+            color: #999;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔥 热点内容生成器</h1>
+            <p>AI智能生成 - 抖音合规版</p>
+        </header>
+        
+        <div class="notice">
+            <strong>✅ 使用说明：</strong><br>
+            1. 点击刷新获取抖音/微博热点<br>
+            2. 选择热点话题<br>
+            3. 点击生成获取AI文案<br>
+            <strong>🛡️ 已启用抖音合规过滤</strong>
+        </div>
+        
+        <div class="card">
+            <h2>🔑 API设置</h2>
+            <div class="form-group">
+                <label>天聚数行 API Key（获取热点）</label>
+                <input type="password" id="tianApiKey" value="a72f9f60cf0a10d2d142162d06fe839e">
+            </div>
+            <div class="form-group">
+                <label>智谱AI API Key（生成内容）</label>
+                <input type="password" id="apiKey" value="1ef1a255b98c4c81b00cd9d39e3c0b78.hP9D7HGMdv65PqDz">
+            </div>
+        </div>
+        
+        <div class="card hot-section">
+            <div class="hot-header">
+                <h2>🔥 实时热点</h2>
+                <div class="hot-tabs">
+                    <button class="hot-tab active" onclick="switchHotTab('douyin', this)">🎵 抖音</button>
+                    <button class="hot-tab" onclick="switchHotTab('weibo', this)">📰 微博</button>
+                </div>
+            </div>
+            <div style="margin-bottom: 10px;">
+                <span id="sourceBadge" class="hot-source">🎵 抖音热点</span>
+                <button class="btn" style="padding: 6px 12px; font-size: 12px; width: auto; margin-left: 10px;" onclick="loadHotData()">🔄 刷新</button>
+            </div>
+            <ul class="hot-list" id="hotList">
+                <li style="padding: 20px; text-align: center; color: #999;">点击刷新按钮获取热点</li>
+            </ul>
+            <div class="update-info" id="updateInfo"></div>
+        </div>
+        
+        <div class="card">
+            <h2>📝 内容设置</h2>
+            <div class="form-group">
+                <label>热点关键词</label>
+                <input type="text" id="keyword" placeholder="如：开工大吉">
+            </div>
+            <div class="form-group">
+                <label>内容领域</label>
+                <select id="field">
+                    <option value="易经">易经</option>
+                    <option value="风水">风水</option>
+                    <option value="八字">八字命理</option>
+                    <option value="星座">星座运势</option>
+                    <option value="奇门">奇门遁甲</option>
+                    <option value="紫微">紫微斗数</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>内容类型</label>
+                <select id="type">
+                    <option value="视频文案">短视频文案（30-60秒）</option>
+                    <option value="文章">公众号文章</option>
+                    <option value="小红书">小红书笔记</option>
+                    <option value="知乎">知乎回答</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>特殊要求（可选）</label>
+                <textarea id="requirements" placeholder="如：要幽默风格、要加入案例..."></textarea>
+            </div>
+            <button class="btn" onclick="generate()">✨ AI智能生成</button>
+        </div>
+        
+        <div class="result-area" id="resultArea">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <span style="color: #667eea; font-weight: 600;">生成结果</span>
+                <button class="btn" style="padding: 8px 16px; font-size: 13px; width: auto;" onclick="copyResult()">📋 复制</button>
+            </div>
+            <div class="result-content" id="resultContent"></div>
+        </div>
+    </div>
+    
+    <div class="toast" id="toast"></div>
+    
+    <script>
+        // API基础URL（Vercel部署后使用相对路径）
+        const API_BASE = '/api';
+        
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+        
+        // 热点功能
+        let currentHotPlatform = 'douyin';
+        let hotData = [];
+        
+        function switchHotTab(platform, btn) {
+            currentHotPlatform = platform;
+            document.querySelectorAll('.hot-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('sourceBadge').textContent = platform === 'douyin' ? '🎵 抖音热点' : '📰 微博热点';
+            loadHotData();
+        }
+        
+        async function loadHotData() {
+            const apiKey = document.getElementById('tianApiKey').value.trim();
+            if (!apiKey) {
+                showToast('请输入天聚数行API Key');
+                return;
+            }
+            
+            const list = document.getElementById('hotList');
+            list.innerHTML = '<li style="padding: 20px; text-align: center;"><div class="loading">加载中...</div></li>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/hot?platform=${currentHotPlatform}&key=${apiKey}`);
+                const result = await response.json();
+                
+                if (result.code === 200 && result.result && result.result.list) {
+                    const guoxueKeywords = ['运势', '风水', '命理', '八字', '星座', '生肖', '本命年', '财运', '桃花', '姻缘', '算命', '占卜', '易经', '周易', '奇门', '紫微', '塔罗', '星盘', '流年', '太岁', '冲煞', '吉日', '黄道', '择日', '开工', '祈福', '转运', '改运', '旺夫', '旺妻', '旺宅', '财位', '桃花位', '文昌', '贵人', '小人', '犯太岁', '化太岁', '拜太岁', '安太岁'];
+                    
+                    let filteredData = result.result.list.filter(item => {
+                        const title = (item.hotword || item.word || '').toLowerCase();
+                        return guoxueKeywords.some(keyword => title.includes(keyword));
+                    });
+                    
+                    if (filteredData.length === 0) {
+                        filteredData = result.result.list.slice(0, 10);
+                        showToast('暂无国学热点，显示综合热点');
+                    } else {
+                        showToast(`筛选到${filteredData.length}条国学/易学热点！`);
+                    }
+                    
+                    hotData = filteredData.map((item, index) => ({
+                        rank: index + 1,
+                        title: item.hotword || item.word,
+                        heat: parseInt(item.hotwordnum || item.hotnum || 0) > 1000000 ? '爆' : parseInt(item.hotwordnum || item.hotnum || 0) > 500000 ? '热' : '新',
+                        hot: parseInt(item.hotwordnum || item.hotnum || 0)
+                    }));
+                    
+                    renderHotList(hotData);
+                    document.getElementById('updateInfo').textContent = `📅 更新时间: ${new Date().toLocaleString('zh-CN')}`;
+                } else if (result.code === 160) {
+                    throw new Error(`尚未申请${currentHotPlatform === 'douyin' ? '抖音' : '微博'}热搜接口，请去天聚数行控制台申请`);
+                } else {
+                    throw new Error(result.msg || '数据获取失败');
+                }
+            } catch (error) {
+                console.error('获取失败:', error);
+                list.innerHTML = `<li style="padding: 20px; text-align: center; color: #c62828;">❌ ${error.message}</li>`;
+            }
+        }
+        
+        function renderHotList(data) {
+            const list = document.getElementById('hotList');
+            list.innerHTML = data.map((item, index) => {
+                const heatClass = item.heat === '爆' ? 'heat-bao' : item.heat === '热' ? 'heat-re' : 'heat-xin';
+                return `
+                    <li class="hot-item" onclick="selectHot('${item.title.replace(/'/g, "\\'")}')">
+                        <span class="hot-rank ${index < 3 ? 'top3' : 'normal'}">${index + 1}</span>
+                        <span class="hot-text">${item.title}</span>
+                        <span class="hot-heat ${heatClass}">${item.heat}</span>
+                    </li>
+                `;
+            }).join('');
+        }
+        
+        function selectHot(title) {
+            document.getElementById('keyword').value = title;
+            showToast(`已选择：${title}`);
+        }
+        
+        async function generate() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const keyword = document.getElementById('keyword').value.trim();
+            const field = document.getElementById('field').value;
+            const type = document.getElementById('type').value;
+            const requirements = document.getElementById('requirements').value.trim();
+            
+            if (!apiKey) {
+                showToast('请输入API Key');
+                return;
+            }
+            if (!keyword) {
+                showToast('请输入热点关键词');
+                return;
+            }
+            
+            const resultArea = document.getElementById('resultArea');
+            const resultContent = document.getElementById('resultContent');
+            
+            resultArea.classList.add('show');
+            resultContent.innerHTML = '<div class="loading">🤖 AI正在创作中，请稍候...</div>';
+            
+            const prompt = buildPrompt(keyword, field, type, requirements);
+            
+            try {
+                const response = await fetch(`${API_BASE}/kimi`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ apiKey, prompt })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+                    throw new Error('API返回格式异常');
+                }
+                
+                resultContent.textContent = data.choices[0].message.content;
+            } catch (error) {
+                resultContent.innerHTML = `<div style="color: #c62828;">❌ 生成失败：${error.message}</div>`;
+            }
+        }
+        
+        function buildPrompt(keyword, field, type, requirements) {
+            const styleMap = {
+                '视频文案': '口语化、适合视频配音、有节奏感、短句为主',
+                '文章': '通俗易懂、有干货、有温度、结构清晰',
+                '小红书': '轻松活泼、多用emoji、分段清晰、亲切感',
+                '知乎': '专业严谨、逻辑清晰、有深度、有理有据'
+            };
+            
+            const lengthMap = {
+                '视频文案': '200-400字',
+                '文章': '500-800字',
+                '小红书': '300-600字',
+                '知乎': '600-1000字'
+            };
+            
+            return `你是一位资深的${field}研究专家，擅长将传统国学智慧与现代热点结合。
+
+请根据以下信息创作内容：
+热点话题：${keyword}
+内容领域：${field}
+输出类型：${type}
+${requirements ? '特殊要求：' + requirements : ''}
+
+创作要求：
+1. 内容要紧密结合热点话题，从${field}专业角度给出独特见解
+2. 语言风格要${styleMap[type]}
+3. 避免使用"首先、其次、最后"等机械连接词
+4. 要像真人专家即兴分享，自然流畅
+5. 字数控制在${lengthMap[type]}
+6. 开头要有吸引力，结尾要有互动引导
+7. 内容要有信息量，不能空洞
+
+请直接输出内容，不要有任何前缀说明。`;
+        }
+        
+        function copyResult() {
+            const content = document.getElementById('resultContent').textContent;
+            navigator.clipboard.writeText(content).then(() => showToast('已复制！'));
+        }
+    </script>
+</body>
+</html>
